@@ -3,127 +3,250 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PDF Downloader</title>
+    <title>Materials Downloader</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Space+Grotesk:wght@700;900&display=swap" rel="stylesheet">
     <style>
         :root {
             --primary: #FF5B1F;
+            --primary-light: #FF8C42;
+            --primary-tint: #FFF3ED;
             --dark: #1A1A2E;
             --background: #F5F5F7;
             --surface: #FFFFFF;
+            --border: #E5E7EB;
+            --muted: #6B7280;
+            --error: #EF4444;
+            --success: #22C55E;
         }
+        * { box-sizing: border-box; }
         body {
             font-family: 'DM Sans', sans-serif;
             background-color: var(--background);
             color: var(--dark);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
             margin: 0;
             padding: 24px;
-            text-align: center;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
         .container {
             background: var(--surface);
             padding: 32px;
             border-radius: 20px;
-            box-shadow: 0 4px 12px rgba(0,0,0,.08);
-            max-width: 400px;
+            box-shadow: 0 8px 24px rgba(0,0,0,.08);
+            max-width: 600px;
             width: 100%;
+            text-align: center;
         }
         h1 {
             font-family: 'Space Grotesk', sans-serif;
-            font-size: 22px;
-            font-weight: 700;
+            font-size: 28px;
+            font-weight: 900;
             color: var(--primary);
-            margin-bottom: 16px;
+            margin: 0 0 8px 0;
         }
-        p {
-            font-size: 13px;
-            line-height: 1.5;
-            color: #6B7280;
+        p.subtitle {
+            font-size: 14px;
+            color: var(--muted);
+            margin-bottom: 24px;
+        }
+        .download-box {
+            background: var(--primary-tint);
+            border: 2px dashed var(--primary-light);
+            padding: 24px;
+            border-radius: 14px;
+            margin-bottom: 24px;
+        }
+        .file-name {
+            font-weight: 700;
+            font-size: 16px;
+            word-break: break-all;
+            margin-bottom: 12px;
+            display: block;
         }
         .status {
-            margin-top: 20px;
-            font-weight: 600;
-            font-size: 14px;
+            font-size: 13px;
+            font-weight: 500;
+            margin: 12px 0;
         }
-        code {
-            background: #f0f0f0;
-            padding: 2px 6px;
+        .progress-bar {
+            height: 8px;
+            background: var(--border);
             border-radius: 4px;
-            font-family: monospace;
+            overflow: hidden;
+            margin: 10px 0;
+            display: none;
         }
+        .progress-fill {
+            height: 100%;
+            background: var(--primary);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        button {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 14px 28px;
+            border-radius: 50px;
+            font-weight: 700;
+            font-size: 14px;
+            cursor: pointer;
+            box-shadow: 0 8px 24px rgba(255,91,31,.40);
+            transition: transform 0.12s;
+        }
+        button:active { transform: scale(0.97); }
+        button:disabled { background: var(--muted); cursor: not-allowed; }
+
+        .file-list {
+            text-align: left;
+            margin-top: 32px;
+            width: 100%;
+        }
+        .file-list h2 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 17px;
+            margin-bottom: 16px;
+        }
+        .file-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            border-bottom: 1px solid var(--border);
+            text-decoration: none;
+            color: var(--dark);
+            font-size: 13px;
+            transition: background 0.2s;
+        }
+        .file-item:hover { background: var(--primary-tint); }
+        .file-item span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 80%; }
+        .file-item i { color: var(--primary); font-style: normal; font-weight: bold; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>PDF Downloader</h1>
-        <div id="content">
-            <p>Initializing...</p>
+        <h1>Study Materials</h1>
+        <p class="subtitle">Direct Download Portal</p>
+
+        <div id="active-download" style="display: none;">
+            <div class="download-box">
+                <span class="file-name" id="target-file">File Name Here</span>
+                <div class="progress-bar" id="p-bar"><div class="progress-fill" id="p-fill"></div></div>
+                <p class="status" id="status-text">Preparing download...</p>
+                <button id="action-btn">Download Now</button>
+            </div>
+        </div>
+
+        <div class="file-list" id="gallery">
+            <h2>Available Files</h2>
+            <div id="list-container">
+                <!-- Files will be injected here -->
+            </div>
         </div>
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const params = new URLSearchParams(window.location.search);
-            const fileName = params.get('file');
-            const contentDiv = document.getElementById('content');
+        const files = [
+            "Annelida.pdf", "Applied-Zoology-in-Assam-Biodiversity-Economy-and-Conservation.pdf",
+            "Arthropoda.pdf", "Ascaris lumbricoides.pdf", "Basic-Biochemistry.pdf",
+            "Biotechnology-and-Microbiology-Principles-and-Modern-Applications.pdf",
+            "Canal System in Sponges.pdf", "Cell-Biology-Complete-Study-Notes.pdf",
+            "Cnidaria.pdf", "Comparative-Vertebrate-Biology.pdf",
+            "Comprehensive-Medical-Physiology-and-Histology.pdf", "Corals & Coral Reefs.pdf",
+            "Ctenophora.pdf", "Ecology-and-Environmental-Biology-A-Global-and-Regional-Perspective.pdf",
+            "Ecology-Biodiversity-and-Conservation.pdf", "Entamoeba histolytica.pdf",
+            "Euglena, Amoeba, Paramecium.pdf", "Evolution of Symmetry & Segmentation.pdf",
+            "Evolution-Paleobotany-and-Economic-Botany.pdf", "Evolutionary Significance of Ctenophora.pdf",
+            "Evolutionary-Marvels-A-Survey-of-Invertebrate-and-Chordate-Biology.pdf",
+            "Fasciola hepatica.pdf", "From-Single-Cells-to-Simple-Animals-An-Evolutionary-Study.pdf",
+            "Invertebrate-Zoology-A-Comprehensive-Study-Guide.pdf", "Locomotion & Reproduction in Protista.pdf",
+            "Lower-Cryptogams-to-Gymnosperms.pdf", "Mammals-A-Comprehensive-Overview.pdf",
+            "Metagenesis in Obelia.pdf", "Metamerism.pdf", "Metamorphosis in Insects.pdf",
+            "Molecular-Biology-and-Genetics.pdf", "Mollusca.pdf", "Nemathelminthes.pdf",
+            "Parasitic Adaptations in Helminths.pdf", "Parazoa & Metazoa.pdf",
+            "Plant-Physiology-The-Architecture-of-Life (1).pdf", "Plant-Physiology-The-Architecture-of-Life.pdf",
+            "Plasmodium vivax.pdf", "Platyhelminthes.pdf", "Polymorphism in Cnidaria.pdf",
+            "Porifera.pdf", "Protista.pdf", "Spicules in Sponges.pdf", "Taenia solium.pdf",
+            "Taxonomy-and-Systematics-The-Science-of-Biological-Order.pdf",
+            "The-Architecture-of-Life-A-Guide-to-Cell-Structure-and-Function.pdf",
+            "Umbrella-4-Plant-Anatomy-and-Embryology.pdf", "Vision In Arthropods.pdf",
+            "Wuchereria-bancrofti.pdf"
+        ];
 
-            if (fileName) {
-                const decodedName = decodeURIComponent(fileName);
-                contentDiv.innerHTML = `
-                    <p>File detected: <br><code>${decodedName}</code></p>
-                    <p class="status" id="status-msg">Attempting automatic download...</p>
-                    <button id="retry-btn" style="display: none; margin-top: 15px; padding: 12px 24px; background: var(--primary); color: white; border: none; border-radius: 50px; cursor: pointer; font-family: 'DM Sans', sans-serif; font-weight: 700; box-shadow: 0 8px 24px rgba(255,91,31,.40);">
-                        Download Manually
-                    </button>
-                `;
-
-                const triggerDownload = () => {
-                    const link = document.createElement('a');
-                    link.href = decodedName;
-                    link.download = decodedName;
-                    // For local file protocol, some browsers need the link to be in the DOM
-                    link.style.display = 'none';
-                    document.body.appendChild(link);
-                    
-                    try {
-                        link.click();
-                        document.getElementById('status-msg').innerHTML = 'Download triggered! Check your browser downloads.';
-                        document.getElementById('status-msg').style.color = '#22C55E';
-                    } catch (e) {
-                        document.getElementById('status-msg').innerHTML = 'Automatic download blocked by browser.';
-                        document.getElementById('status-msg').style.color = '#EF4444';
-                    }
-                    
-                    setTimeout(() => {
-                        if (document.body.contains(link)) {
-                            document.body.removeChild(link);
-                        }
-                    }, 100);
-                };
-
-                // Show retry button after a short delay if it hasn't finished
-                setTimeout(() => {
-                    const btn = document.getElementById('retry-btn');
-                    btn.style.display = 'inline-block';
-                    btn.onclick = triggerDownload;
-                }, 2000);
-
-                // Initial attempt
-                setTimeout(triggerDownload, 500);
-
-            } else {
-                contentDiv.innerHTML = `
-                    <p>No file specified.</p>
-                    <p>Please use the URL format:<br>
-                    <code>?file=Filename.pdf</code></p>
-                    <p style="margin-top: 15px;">Example:<br>
-                    <a href="?file=Annelida.pdf" style="color: var(--primary); text-decoration: none; font-weight: bold;">?file=Annelida.pdf</a></p>
-                `;
-            }
+        const container = document.getElementById('list-container');
+        files.forEach(f => {
+            const a = document.createElement('a');
+            a.className = 'file-item';
+            a.href = `?file=${encodeURIComponent(f)}`;
+            a.innerHTML = `<span>${f}</span><i>Download</i>`;
+            container.appendChild(a);
         });
+
+        const params = new URLSearchParams(window.location.search);
+        const fileToDownload = params.get('file');
+
+        if (fileToDownload) {
+            document.getElementById('active-download').style.display = 'block';
+            document.getElementById('gallery').style.display = 'none';
+            document.getElementById('target-file').innerText = fileToDownload;
+            
+            const btn = document.getElementById('action-btn');
+            const status = document.getElementById('status-text');
+            const pBar = document.getElementById('p-bar');
+            const pFill = document.getElementById('p-fill');
+
+            const forceDownload = async () => {
+                btn.disabled = true;
+                pBar.style.display = 'block';
+                status.innerText = 'Downloading...';
+                status.style.color = 'var(--dark)';
+
+                try {
+                    const response = await fetch(fileToDownload);
+                    if (!response.ok) throw new Error('File not found');
+                    
+                    const reader = response.body.getReader();
+                    const contentLength = +response.headers.get('Content-Length');
+                    let receivedLength = 0;
+                    let chunks = [];
+
+                    while(true) {
+                        const {done, value} = await reader.read();
+                        if (done) break;
+                        chunks.push(value);
+                        receivedLength += value.length;
+                        if (contentLength) {
+                            pFill.style.width = `${(receivedLength / contentLength) * 100}%`;
+                        }
+                    }
+
+                    const blob = new Blob(chunks);
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = fileToDownload;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    
+                    status.innerText = 'Download complete!';
+                    status.style.color = 'var(--success)';
+                    btn.innerText = 'Download Again';
+                    btn.disabled = false;
+                } catch (e) {
+                    status.innerText = 'Error: ' + e.message;
+                    status.style.color = 'var(--error)';
+                    btn.disabled = false;
+                    btn.innerText = 'Retry Download';
+                }
+            };
+
+            btn.onclick = forceDownload;
+            // Auto-start
+            setTimeout(forceDownload, 1000);
+        }
     </script>
 </body>
 </html>

@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Downloader</title>
+    <style>
+        :root {
+            --primary: #FF5B1F;
+            --dark: #1A1A2E;
+            --background: #F5F5F7;
+            --surface: #FFFFFF;
+        }
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background-color: var(--background);
+            color: var(--dark);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            padding: 24px;
+            text-align: center;
+        }
+        .container {
+            background: var(--surface);
+            padding: 32px;
+            border-radius: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,.08);
+            max-width: 400px;
+            width: 100%;
+        }
+        h1 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 16px;
+        }
+        p {
+            font-size: 13px;
+            line-height: 1.5;
+            color: #6B7280;
+        }
+        .status {
+            margin-top: 20px;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        code {
+            background: #f0f0f0;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>PDF Downloader</h1>
+        <div id="content">
+            <p>Initializing...</p>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const params = new URLSearchParams(window.location.search);
+            const fileName = params.get('file');
+            const contentDiv = document.getElementById('content');
+
+            if (fileName) {
+                const decodedName = decodeURIComponent(fileName);
+                contentDiv.innerHTML = `
+                    <p>File detected: <br><code>${decodedName}</code></p>
+                    <p class="status" id="status-msg">Attempting automatic download...</p>
+                    <button id="retry-btn" style="display: none; margin-top: 15px; padding: 12px 24px; background: var(--primary); color: white; border: none; border-radius: 50px; cursor: pointer; font-family: 'DM Sans', sans-serif; font-weight: 700; box-shadow: 0 8px 24px rgba(255,91,31,.40);">
+                        Download Manually
+                    </button>
+                `;
+
+                const triggerDownload = () => {
+                    const link = document.createElement('a');
+                    link.href = decodedName;
+                    link.download = decodedName;
+                    // For local file protocol, some browsers need the link to be in the DOM
+                    link.style.display = 'none';
+                    document.body.appendChild(link);
+                    
+                    try {
+                        link.click();
+                        document.getElementById('status-msg').innerHTML = 'Download triggered! Check your browser downloads.';
+                        document.getElementById('status-msg').style.color = '#22C55E';
+                    } catch (e) {
+                        document.getElementById('status-msg').innerHTML = 'Automatic download blocked by browser.';
+                        document.getElementById('status-msg').style.color = '#EF4444';
+                    }
+                    
+                    setTimeout(() => {
+                        if (document.body.contains(link)) {
+                            document.body.removeChild(link);
+                        }
+                    }, 100);
+                };
+
+                // Show retry button after a short delay if it hasn't finished
+                setTimeout(() => {
+                    const btn = document.getElementById('retry-btn');
+                    btn.style.display = 'inline-block';
+                    btn.onclick = triggerDownload;
+                }, 2000);
+
+                // Initial attempt
+                setTimeout(triggerDownload, 500);
+
+            } else {
+                contentDiv.innerHTML = `
+                    <p>No file specified.</p>
+                    <p>Please use the URL format:<br>
+                    <code>?file=Filename.pdf</code></p>
+                    <p style="margin-top: 15px;">Example:<br>
+                    <a href="?file=Annelida.pdf" style="color: var(--primary); text-decoration: none; font-weight: bold;">?file=Annelida.pdf</a></p>
+                `;
+            }
+        });
+    </script>
+</body>
+</html>
